@@ -7,6 +7,13 @@ import org.apache.kafka.common.serialization.Deserializer;
 import java.io.IOException;
 import java.util.Map;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.kafka.common.serialization.Deserializer;
+
+import java.io.IOException;
+import java.util.Map;
+
 public class JsonNodeDeserializer implements Deserializer<JsonNode> {
 
     @Override
@@ -16,6 +23,10 @@ public class JsonNodeDeserializer implements Deserializer<JsonNode> {
 
     @Override
     public JsonNode deserialize(String topic, byte[] data) {
+        if (data == null) {
+            return null;  // Handle null content gracefully
+        }
+
         try {
             ObjectMapper mapper = new ObjectMapper();
             return mapper.readTree(data);
@@ -29,4 +40,3 @@ public class JsonNodeDeserializer implements Deserializer<JsonNode> {
         // No resources to release
     }
 }
-
