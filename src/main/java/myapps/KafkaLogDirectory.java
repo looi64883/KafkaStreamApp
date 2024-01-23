@@ -3,8 +3,17 @@ package myapps;
 import java.io.FileInputStream;
 import java.util.Properties;
 
+/**
+ * The KafkaLogDirectory class is a simple utility to retrieve the log directory path
+ * from the Kafka server.properties file.
+ */
 public class KafkaLogDirectory {
 
+    /**
+     * The main entry point for the KafkaLogDirectory utility.
+     *
+     * @param args Command line arguments (not used).
+     */
     public static void main(String[] args) {
         // Provide the path to your server.properties file
         String serverPropertiesPath = "C:/Kafka/config/server.properties";

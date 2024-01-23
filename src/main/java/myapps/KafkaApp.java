@@ -23,8 +23,20 @@ import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
+/**
+ * KafkaApp is a Kafka Streams application that processes data from two Kafka topics,
+ * performs various transformations on the data, and outputs the results to different Kafka topics.
+ * The application also includes cleanup and state store reset functionality.
+ */
 public class KafkaApp {
 
+
+    /**
+     * The main entry point for the Kafka Streams application.
+     *
+     * @param args Command line arguments (not used in this application).
+     * @throws Exception Thrown if there is an error during Kafka Streams processing.
+     */
     public static void main(String[] args) throws Exception {
 
         final Logger logger = LoggerFactory.getLogger(KafkaApp.class);
@@ -250,6 +262,12 @@ public class KafkaApp {
         System.exit(0);
     }
 
+    /**
+     * Cleans up the state store directory and resets the state store after stopping Kafka Streams.
+     *
+     * @param kafkaStreams   The KafkaStreams instance to be stopped.
+     * @param streamsConfig  The StreamsConfig instance containing configuration properties.
+     */
     private static void cleanAndResetStateStore(KafkaStreams kafkaStreams, StreamsConfig streamsConfig) {
         try {
             // Stop Kafka Streams before cleaning up the state store
@@ -284,6 +302,12 @@ public class KafkaApp {
     }
 
 
+    /**
+     * Deletes a directory and its contents.
+     *
+     * @param directory The directory to be deleted.
+     * @throws IOException Thrown if there is an error during directory deletion.
+     */
     private static void deleteDirectory(File directory) throws IOException {
         try {
             if (directory.exists()) {
