@@ -14,6 +14,9 @@ import org.apache.kafka.streams.kstream.Produced;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -23,11 +26,12 @@ import java.util.concurrent.CountDownLatch;
 public class KafkaApp {
 
     public static void main(String[] args) throws Exception {
+
         final Logger logger = LoggerFactory.getLogger(KafkaApp.class);
 
         Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-process-data");
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "github-issues-tracker"); 
+        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-process-data-helloworld1");
+        props.put(ConsumerConfig.GROUP_ID_CONFIG, "github-issues-tracker-hello");
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
 
         // Use JSON serde for key and value
@@ -36,11 +40,13 @@ public class KafkaApp {
 
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
+        StreamsConfig streamsConfig = new StreamsConfig(props);
+
         StreamsBuilder builder = new StreamsBuilder();
 
         // Consume from github-issues-1 and github-issues-2 topics
-        KStream<JsonNode, String> githubIssues1 = builder.stream("github-issues-1", Consumed.with(Serdes.serdeFrom(new JsonNodeSerializer(), new JsonNodeDeserializer()), Serdes.String()));
-        KStream<JsonNode, String> githubIssues2 = builder.stream("github-issues-2", Consumed.with(Serdes.serdeFrom(new JsonNodeSerializer(), new JsonNodeDeserializer()), Serdes.String()));
+        KStream<JsonNode, String> githubIssues1 = builder.stream("github-issues-1-looi1", Consumed.with(Serdes.serdeFrom(new JsonNodeSerializer(), new JsonNodeDeserializer()), Serdes.String()));
+        KStream<JsonNode, String> githubIssues2 = builder.stream("github-issues-2-wan1", Consumed.with(Serdes.serdeFrom(new JsonNodeSerializer(), new JsonNodeDeserializer()), Serdes.String()));
 
         // Merge the two streams
         KStream<JsonNode, String> mergedStream = githubIssues1.merge(githubIssues2);
@@ -193,7 +199,7 @@ public class KafkaApp {
 
         // Perform word count for Commenter values
         commenterStream
-                .flatMapValues(value -> Arrays.asList(value.toLowerCase().split("\\W+")))
+                .flatMapValues(value -> Arrays.asList(value.toLowerCase().split("\\s")))
                 .groupBy((key, word) -> word)
                 .count()
                 .toStream()
@@ -225,7 +231,12 @@ public class KafkaApp {
         Runtime.getRuntime().addShutdownHook(new Thread("streams-shutdown-hook") {
             @Override
             public void run() {
+                // Stop Kafka Streams before cleaning up the state store
                 streams.close();
+
+                // Clean up and reset the state store after stopping Kafka Streams
+                cleanAndResetStateStore(streams, streamsConfig);
+
                 latch.countDown();
             }
         });
@@ -238,4 +249,60 @@ public class KafkaApp {
         }
         System.exit(0);
     }
+
+    private static void cleanAndResetStateStore(KafkaStreams kafkaStreams, StreamsConfig streamsConfig) {
+        try {
+            // Stop Kafka Streams before cleaning up the state store
+            kafkaStreams.close();
+
+            // Get the application ID for creating the state store directory path
+            String applicationId = streamsConfig.getString(StreamsConfig.APPLICATION_ID_CONFIG);
+
+            // Get the state directory path
+            String stateDirPath = streamsConfig.getString(StreamsConfig.STATE_DIR_CONFIG);
+
+            // Construct the full path of the state store directory
+            String stateStoreDirPath = stateDirPath + "/" + applicationId;
+
+            // Check if the state store directory exists before attempting to delete
+            File stateStoreDir = new File(stateStoreDirPath);
+            if (stateStoreDir.exists()) {
+                // Manually delete the state store directory and its contents
+                deleteDirectory(stateStoreDir);
+                System.out.println("State store directory deleted: " + stateStoreDirPath);
+            } else {
+                System.out.println("State store directory does not exist: " + stateStoreDirPath);
+            }
+
+            // Clean up and reset the state store after stopping Kafka Streams
+            kafkaStreams.cleanUp();
+
+        } catch (Exception e) {
+            // Handle exceptions appropriately
+            e.printStackTrace();
+        }
+    }
+
+
+    private static void deleteDirectory(File directory) throws IOException {
+        try {
+            if (directory.exists()) {
+                // Stop the Kafka broker before deleting the log directory
+                // You need to stop the Kafka broker service or process
+
+                // Then, proceed with deleting the log directory
+                Files.walk(directory.toPath())
+                        .map(java.nio.file.Path::toFile)
+                        .sorted((o1, o2) -> -o1.compareTo(o2))
+                        .forEach(File::delete);
+                System.out.println("Directory deleted: " + directory.getAbsolutePath());
+            } else {
+                System.out.println("Directory does not exist: " + directory.getAbsolutePath());
+            }
+        } catch (Exception e) {
+            // Handle exceptions appropriately
+            e.printStackTrace();
+        }
+    }
+
 }
